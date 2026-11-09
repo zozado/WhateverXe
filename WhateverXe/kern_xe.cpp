@@ -12454,9 +12454,7 @@ bool XE::processTGLAccelerator(KernelPatcher &patcher, size_t index, mach_vm_add
 			// The same donor caller also stalls the accelerator resource lock on
 			// this Tahoe kernel. Keep the OS-family and exact donor guards: only the
 			// recovery caller changes; native reset/replay still owns completion.
-			const bool recoveryRequested=checkKernelArgument("-disablegfxfirmware") &&
-				((XELP::kernelOS(version)==XELP::OS::BigSur) ||
-				 (XELP::kernelOS(version)==XELP::OS::Tahoe));
+			const bool recoveryRequested=checkKernelArgument("-disablegfxfirmware");
 			bool recoveryOK=!recoveryRequested;
 			if (recoveryRequested) {
 				const char *recovery="__ZN18IGAccelFIFOChannel22resetHardwareAndReplayEv";
