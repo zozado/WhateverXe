@@ -6121,6 +6121,16 @@ IOReturn XE::wrapDisplay13FBEnableIRQ(IOService *controller) {
 		c.status=c.quiescing ? Display13FBIRQ::Status::Power : actual.status;
 		if(c.status==Display13FBIRQ::Status::Complete)c.status=c.state.begun && c.state.enabled ?
 			Display13FBIRQ::extendActivePipes(io,c.state,admitted) : Display13FBIRQ::enable(io,c.state,excluded,adlnSharedGT(controller),actual.active,callbackXE->adlnOutputWiring.hotplug(),callbackXE->adlnOutputWiring.typeC);
+	} else if(c.quiescing)c.status=Display13FBIRQ::Status::Power;
+	else if(c.state.begun && !c.state.faulted && !(c.state.enabled && c.state.active) &&
+		!Display13Transcoder::running(io,0,c.state.transcoders)) {
+		// Local patch (ADL-P 46A6 wake): on display wake the native driver enables
+		// interrupts before enablePipe sets PIPECONF. A full enable() then sees no
+		// active pipe, fails Topology and latches the master off, so flips never
+		// complete (WindowServer watchdog). Stay hotplug-only like the multi-output
+		// path; the VBL callback re-arms pipe A once the transcoder really runs.
+		c.status=c.state.enabled && !c.state.active && (io.read(Display13FBIRQ::Master)&Display13FBIRQ::Enable) ?
+			Display13FBIRQ::Status::Complete : Display13FBIRQ::hotplugOnly(io,c.state,false);
 	} else c.status=c.quiescing ? Display13FBIRQ::Status::Power : Display13FBIRQ::enable(io,c.state,excluded,adlnSharedGT(controller),1,callbackXE->adlnOutputWiring.hotplug(),callbackXE->adlnOutputWiring.typeC);
 	adlnIRQCache(controller,io);adlnIRQRecord(record,1);
 	check[23]=static_cast<uint32_t>(c.status);check[24]=c.state.begun;
